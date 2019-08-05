@@ -1,9 +1,0 @@
-.Controls {
-  display: flex;
-  width: 10%;
-  justify-content: space-around;
-}
-
-.Controls .icon {
-  cursor: pointer;
-}

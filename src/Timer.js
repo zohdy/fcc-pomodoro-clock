@@ -1,11 +1,26 @@
 import React from "react";
 import "./Timer.css";
 
-export default function Timer({ timer, breakActive }) {
+const Timer = ({ alarmColor, timerType, timeLeft }) => {
+  const clockify = (timeLeft) => {
+    let minutes = Math.floor(timeLeft / 60);
+    let seconds = timeLeft - minutes * 60;
+    seconds = seconds < 10 ? "0" + seconds : seconds;
+    minutes = minutes < 10 ? "0" + minutes : minutes;
+    return minutes + ":" + seconds;
+  };
   return (
-    <div className="Timer">
-      <h3>{breakActive ? "Break" : "Session"}</h3>
-      <span>{timer}</span>
+    <div className="Timer" style={alarmColor}>
+      <div className="Timer-wrapper">
+        <span className="Timer-label" id="timer-label">
+          {timerType}
+        </span>
+        <span className="Timer-display" id="time-left">
+          {clockify(timeLeft)}
+        </span>
+      </div>
     </div>
   );
-}
+};
+
+export default Timer;

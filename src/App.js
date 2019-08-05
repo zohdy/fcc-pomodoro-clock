@@ -1,95 +1,186 @@
-import React, { useState, useEffect } from "react";
-import "./App.css";
-import Settings from "./Settings";
+import React, { Component } from "react";
+import TimerLengthSettings from "./TimerLengthSettings";
 import Timer from "./Timer";
-import Controls from "./Controls";
+import TimerControl from "./TimerControl";
+import "./App.css";
 
-function App() {
-  const [breakLength, setBreakLength] = useState(5);
-  const [sessionLength, setSessionLength] = useState(3);
-  const [timer, setTimer] = useState(sessionLength);
-  const [trigger, setTrigger] = useState(false);
-  const [breakActive, setBreakActive] = useState(false);
-
-  useEffect(() => {
-    let sessionId;
-    let breakId;
-
-    const startSession = () => {
-      sessionId = setInterval(() => setTimer(timer - 1), 1000);
-      if (timer < 0) {
-        setBreakActive(true);
-        setTimer(breakLength);
-      }
-    };
-
-    const startBreak = () => {
-      breakId = setInterval(() => setTimer(timer - 1), 1000);
-      if (timer < 0) {
-        setBreakActive(false);
-        setTimer(sessionLength);
-      }
-    };
-
-    if (trigger && !breakActive) {
-      startSession();
-      return () => clearInterval(sessionId);
-    }
-    if (trigger && breakActive) {
-      startBreak();
-      return () => clearInterval(breakId);
-    }
-  });
-
-  const startTimer = () => {
-    setTrigger(true);
+export default class App extends Component {
+  state = {
+    breakLength: 5,
+    sessionLength: 25,
+    timerState: "stopped",
+    timerType: "Session",
+    timeLeft: 1500,
+    intervalID: "",
+    alarmColor: { color: "white" }
   };
 
-  const pauseTimer = () => {
-    setTrigger(false);
+  setBreakLength = (e) => {
+    this.lengthControl(
+      "breakLength",
+      e.currentTarget.value,
+      this.state.breakLength,
+      "Session"
+    );
   };
-
-  const resetTimer = () => {
-    setTrigger(false);
-    setBreakLength(5);
-    setSessionLength(25);
+  setSessionLength = (e) => {
+    this.lengthControl(
+      "sessionLength",
+      e.currentTarget.value,
+      this.state.sessionLength,
+      "Break"
+    );
   };
-
-  const changeTimerLength = (selection, delta) => {
-    // Break Length
-    if (selection === "break") {
-      if (delta === "dec" && breakLength > 1) {
-        setBreakLength(breakLength - 1);
-      } else if (delta === "inc") {
-        setBreakLength(breakLength + 1);
-      }
+  lengthControl = (stateToChange, sign, currentLength, timerType) => {
+    if (this.state.timerState === "running") {
+      return;
     }
-    // Session Length
-    if (selection === "session") {
-      if (delta === "dec" && sessionLength > 1) {
-        setSessionLength(sessionLength - 1);
-      } else if (delta === "inc") {
-        setSessionLength(sessionLength + 1);
+
+    if (this.state.timerType === timerType) {
+      if (sign === "-" && currentLength !== 1) {
+        this.setState({ [stateToChange]: currentLength - 1 });
+      } else if (sign === "+" && currentLength !== 60) {
+        this.setState({ [stateToChange]: currentLength + 1 });
+      }
+    } else {
+      if (sign === "-" && currentLength !== 1) {
+        this.setState({
+          [stateToChange]: currentLength - 1,
+          timeLeft: currentLength * 60 - 60
+        });
+      } else if (sign === "+" && currentLength !== 60) {
+        this.setState({
+          [stateToChange]: currentLength + 1,
+          timeLeft: currentLength * 60 + 60
+        });
       }
     }
   };
 
-  return (
-    <div className="App">
-      <h1>Pomodoro Clock</h1>
-      <Settings
-        changeTimerLength={changeTimerLength}
-        breakLength={breakLength}
-        sessionLength={sessionLength}
-      />
-      <Timer timer={timer} breakActive={breakActive} />
-      <Controls
-        startTimer={startTimer}
-        pauseTimer={pauseTimer}
-        resetTimer={resetTimer}
-      />
-    </div>
-  );
+  timerControl = () => {
+    if (this.state.timerState === "stopped") {
+      this.beginCountDown();
+      this.setState({ timerState: "running" });
+    } else {
+      this.setState({ timerState: "stopped" });
+      this.state.intervalID && clearInterval(this.state.intervalID);
+    }
+  };
+
+  beginCountDown = () => {
+    this.setState({
+      intervalID: setInterval(() => {
+        this.decrementTimer();
+        this.phaseControl();
+      }, 1000)
+    });
+  };
+
+  decrementTimer = () => {
+    this.setState({ timeLeft: this.state.timeLeft - 1 });
+  };
+
+  phaseControl = () => {
+    this.warning(this.state.timeLeft);
+    this.buzzer(this.state.timeLeft);
+    if (this.state.timeLeft < 0) {
+      if (this.state.timerType === "Session") {
+        this.state.intervalID && clearInterval(this.state.intervalID);
+        this.beginCountDown();
+        this.switchTimer(this.state.breakLength * 60, "Break");
+      } else {
+        this.state.intervalID && clearInterval(this.state.intervalID);
+        this.beginCountDown();
+        this.switchTimer(this.state.sessionLength * 60, "Session");
+      }
+    }
+  };
+
+  warning = (_timeLeft) => {
+    _timeLeft < 61
+      ? this.setState({ alarmColor: { color: "#a50d0d" } })
+      : this.setState({ alarmColor: { color: "white" } });
+  };
+
+  buzzer = (_timeLeft) => {
+    if (_timeLeft === 0) {
+      this.audioBeep.play();
+    }
+  };
+
+  switchTimer = (num, str) => {
+    this.setState({
+      timeLeft: num,
+      timerType: str,
+      alarmColor: { color: "white" }
+    });
+  };
+
+  reset = () => {
+    this.setState({
+      breakLength: 5,
+      sessionLength: 25,
+      timerState: "stopped",
+      timerType: "Session",
+      timeLeft: 1500,
+      intervalID: "",
+      alarmColor: { color: "white" }
+    });
+    this.state.intervalID && clearInterval(this.state.intervalID);
+    this.audioBeep.pause();
+    this.audioBeep.currentTime = 0;
+  };
+  render() {
+    const {
+      breakLength,
+      sessionLength,
+      timerType,
+      alarmColor,
+      timerState,
+      timeLeft
+    } = this.state;
+    return (
+      <div className="App">
+        <h1 className="title">Pomodoro Clock</h1>
+        <div className="wrapper">
+          <TimerLengthSettings
+            titleID="break-label"
+            minID="break-decrement"
+            addID="break-increment"
+            lengthID="break-length"
+            title="Break Length"
+            onClick={this.setBreakLength}
+            length={breakLength}
+          />
+          <TimerLengthSettings
+            titleID="session-label"
+            minID="session-decrement"
+            addID="session-increment"
+            lengthID="session-length"
+            title="Session Length"
+            onClick={this.setSessionLength}
+            length={sessionLength}
+          />
+        </div>
+        <Timer
+          timerType={timerType}
+          alarmColor={alarmColor}
+          timeLeft={timeLeft}
+        />
+        <TimerControl
+          timerControl={this.timerControl}
+          reset={this.reset}
+          timerState={timerState}
+        />
+        <audio
+          id="beep"
+          preload="auto"
+          src="https://goo.gl/65cBl1"
+          ref={(audio) => {
+            this.audioBeep = audio;
+          }}
+        />
+      </div>
+    );
+  }
 }
-
-export default App;

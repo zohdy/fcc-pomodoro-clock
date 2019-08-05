@@ -1,0 +1,33 @@
+.TimerLengthSettings {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.TimerLengthSettings-wrapper {
+  display: flex;
+}
+
+.TimerLengthSettings-title {
+  font-size: 1.4em;
+  margin-bottom: 0.2em;
+}
+
+.TimerLengthSettings-display {
+  margin-right: 0.2em;
+  margin-left: 0.2em;
+  font-size: 1.3em;
+  align-self: center;
+}
+
+.TimerLengthSettings button {
+  border: none;
+  outline: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.TimerLengthSettings-arrow {
+  color: white;
+  font-size: 2em;
+}
