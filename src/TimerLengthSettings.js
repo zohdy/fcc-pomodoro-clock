@@ -7,11 +7,12 @@ import "./TimerLengthSettings.css";
 const TimerLengthSettings = ({
   titleID,
   title,
-  minID,
-  onClick,
+  decrementID,
+  changeLength,
   lengthID,
   length,
-  addID
+  incrementID,
+  lengthType
 }) => {
   return (
     <div className="TimerLengthSettings">
@@ -19,7 +20,12 @@ const TimerLengthSettings = ({
         {title}
       </div>
       <div className="TimerLengthSettings-wrapper">
-        <button id={minID} value="-" onClick={onClick}>
+        <button
+          id={decrementID}
+          onClick={changeLength}
+          length-type={lengthType}
+          operator={"-"}
+        >
           <FontAwesomeIcon
             icon={faArrowDown}
             className="TimerLengthSettings-arrow"
@@ -28,7 +34,12 @@ const TimerLengthSettings = ({
         <span className="TimerLengthSettings-display" id={lengthID}>
           {length}
         </span>
-        <button id={addID} value="+" onClick={onClick}>
+        <button
+          id={incrementID}
+          onClick={changeLength}
+          operator={"+"}
+          length-type={lengthType}
+        >
           <FontAwesomeIcon
             className="TimerLengthSettings-arrow"
             icon={faArrowUp}

@@ -8,125 +8,96 @@ export default class App extends Component {
   state = {
     breakLength: 5,
     sessionLength: 25,
-    timerState: "stopped",
+    isTimerRunning: false,
     timerType: "Session",
     timeLeft: 1500,
-    intervalID: "",
-    alarmColor: { color: "white" }
+    intervalID: ""
   };
 
-  setBreakLength = (e) => {
-    this.lengthControl(
-      "breakLength",
-      e.currentTarget.value,
-      this.state.breakLength,
-      "Session"
-    );
-  };
-  setSessionLength = (e) => {
-    this.lengthControl(
-      "sessionLength",
-      e.currentTarget.value,
-      this.state.sessionLength,
-      "Break"
-    );
-  };
-  lengthControl = (stateToChange, sign, currentLength, timerType) => {
-    if (this.state.timerState === "running") {
-      return;
-    }
+  changeLength = (e) => {
+    let operator = e.currentTarget.getAttribute("operator");
+    let stateToChange = e.currentTarget.getAttribute("length-type");
+    let lengthToChange =
+      stateToChange === "sessionLength"
+        ? this.state.sessionLength
+        : this.state.breakLength;
 
-    if (this.state.timerType === timerType) {
-      if (sign === "-" && currentLength !== 1) {
-        this.setState({ [stateToChange]: currentLength - 1 });
-      } else if (sign === "+" && currentLength !== 60) {
-        this.setState({ [stateToChange]: currentLength + 1 });
-      }
-    } else {
-      if (sign === "-" && currentLength !== 1) {
-        this.setState({
-          [stateToChange]: currentLength - 1,
-          timeLeft: currentLength * 60 - 60
-        });
-      } else if (sign === "+" && currentLength !== 60) {
-        this.setState({
-          [stateToChange]: currentLength + 1,
-          timeLeft: currentLength * 60 + 60
-        });
-      }
+    if (operator === "-" && lengthToChange !== 1) {
+      this.setState({
+        [stateToChange]: lengthToChange - 1,
+        timeLeft: lengthToChange * 60 - 60
+      });
+    } else if (operator === "+" && lengthToChange !== 60) {
+      this.setState({
+        [stateToChange]: lengthToChange + 1,
+        timeLeft: lengthToChange * 60 + 60
+      });
     }
   };
 
   timerControl = () => {
-    if (this.state.timerState === "stopped") {
+    if (!this.state.isTimerRunning) {
       this.beginCountDown();
-      this.setState({ timerState: "running" });
+      this.setState({ isTimerRunning: true });
     } else {
-      this.setState({ timerState: "stopped" });
-      this.state.intervalID && clearInterval(this.state.intervalID);
+      this.setState({ isTimerRunning: false });
+      clearInterval(this.state.intervalID);
     }
   };
 
   beginCountDown = () => {
     this.setState({
       intervalID: setInterval(() => {
-        this.decrementTimer();
-        this.phaseControl();
+        this.setState({ timeLeft: this.state.timeLeft - 1 });
+        this.switchTimer();
+        this.playAlarmSound(this.state.timeLeft);
       }, 1000)
     });
   };
 
-  decrementTimer = () => {
-    this.setState({ timeLeft: this.state.timeLeft - 1 });
-  };
-
-  phaseControl = () => {
-    this.warning(this.state.timeLeft);
-    this.buzzer(this.state.timeLeft);
-    if (this.state.timeLeft < 0) {
-      if (this.state.timerType === "Session") {
-        this.state.intervalID && clearInterval(this.state.intervalID);
+  switchTimer = () => {
+    const {
+      timeLeft,
+      sessionLength,
+      breakLength,
+      intervalID,
+      timerType
+    } = this.state;
+    if (timeLeft < 0) {
+      if (timerType === "Session") {
+        clearInterval(intervalID);
         this.beginCountDown();
-        this.switchTimer(this.state.breakLength * 60, "Break");
+        this.setState({
+          timeLeft: breakLength * 60,
+          timerType: "Break"
+        });
       } else {
-        this.state.intervalID && clearInterval(this.state.intervalID);
+        clearInterval(intervalID);
         this.beginCountDown();
-        this.switchTimer(this.state.sessionLength * 60, "Session");
+        this.setState({
+          timeLeft: sessionLength * 60,
+          timerType: "Session"
+        });
       }
     }
   };
 
-  warning = (_timeLeft) => {
-    _timeLeft < 61
-      ? this.setState({ alarmColor: { color: "#a50d0d" } })
-      : this.setState({ alarmColor: { color: "white" } });
-  };
-
-  buzzer = (_timeLeft) => {
-    if (_timeLeft === 0) {
+  playAlarmSound = (time) => {
+    if (time === 0) {
       this.audioBeep.play();
     }
-  };
-
-  switchTimer = (num, str) => {
-    this.setState({
-      timeLeft: num,
-      timerType: str,
-      alarmColor: { color: "white" }
-    });
   };
 
   reset = () => {
     this.setState({
       breakLength: 5,
       sessionLength: 25,
-      timerState: "stopped",
+      isTimerRunning: false,
       timerType: "Session",
       timeLeft: 1500,
-      intervalID: "",
-      alarmColor: { color: "white" }
+      intervalID: ""
     });
-    this.state.intervalID && clearInterval(this.state.intervalID);
+    clearInterval(this.state.intervalID);
     this.audioBeep.pause();
     this.audioBeep.currentTime = 0;
   };
@@ -136,7 +107,7 @@ export default class App extends Component {
       sessionLength,
       timerType,
       alarmColor,
-      timerState,
+      isTimerRunning,
       timeLeft
     } = this.state;
     return (
@@ -145,21 +116,23 @@ export default class App extends Component {
         <div className="wrapper">
           <TimerLengthSettings
             titleID="break-label"
-            minID="break-decrement"
-            addID="break-increment"
+            decrementID="break-decrement"
+            incrementID="break-increment"
             lengthID="break-length"
             title="Break Length"
-            onClick={this.setBreakLength}
+            changeLength={!isTimerRunning ? this.changeLength : null}
             length={breakLength}
+            lengthType={"breakLength"}
           />
           <TimerLengthSettings
             titleID="session-label"
-            minID="session-decrement"
-            addID="session-increment"
+            decrementID="session-decrement"
+            incrementID="session-increment"
             lengthID="session-length"
             title="Session Length"
-            onClick={this.setSessionLength}
+            changeLength={!isTimerRunning ? this.changeLength : null}
             length={sessionLength}
+            lengthType={"sessionLength"}
           />
         </div>
         <Timer
@@ -170,7 +143,7 @@ export default class App extends Component {
         <TimerControl
           timerControl={this.timerControl}
           reset={this.reset}
-          timerState={timerState}
+          isTimerRunning={isTimerRunning}
         />
         <audio
           id="beep"
